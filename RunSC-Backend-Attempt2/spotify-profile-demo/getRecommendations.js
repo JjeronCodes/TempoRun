@@ -38,8 +38,7 @@ const clientId = "9560ef7bbc08430faa2c2ae1b5209dd5"; // Replace with your client
 const clientSecret = "c5bbdc77b4f24414975139b4a11acf93";
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
-// import { goalTime } from './index.js' 
-// import { intervalsBPM } from './index.js' 
+// import { goalTime, intervalsBPMs } from './index.js' 
 
 if (!code) {
     redirectToAuthCodeFlow(clientId);
@@ -51,16 +50,16 @@ if (!code) {
     map1.set(100, await _getRecommendations(accessToken, seededSongIds, 100));
     map1.set(90, await _getRecommendations(accessToken, seededSongIds, 90));
     map1.set(80, await _getRecommendations(accessToken, seededSongIds, 80));
-    const user_id = _getUser(accessToken);
-    const playlist_id = _makePlaylist(accessToken, user_id.display_name);
+    const user_id = await _getUser(accessToken);
+    const playlist_id = await _createPlaylist(accessToken, user_id.id);
 
-    const intervalsBPMs = [80,90,100];
+    const intervalsBPM = [80, 90, 100];
     const totalTime = 30;
-    const playlist = generatePlaylist(intervalsBPMs, totalTime, map1);
-    const playlist_names = getNames(playlist);
-
+    const playlist = await generatePlaylist(intervalsBPM, totalTime, map1);
+    const playlist_names = await getNames(playlist);
+    
     populateUIArtist(map1.get(80), playlist, playlist_names);
-    _addPlaylist(accessToken, playlist_id.id, playlist);
+    await _addPlaylist(accessToken, playlist_id.id, playlist);
 }
 
 function populateUIArtist(profile, playlist, playlist_names) {
@@ -142,14 +141,14 @@ async function _getRecommendations(token, seeds, bpm){
     return await result.json();
 }
 
-function generatePlaylist(intervalsBPMs, totalTime, bpmMap) {
+function generatePlaylist(intervalsBPM, totalTime, bpmMap) {
     const playlist = [];
     const timeIntervals = [];
-    const sumBPMs = intervalsBPMs.reduce((acc, bpm) => acc + bpm, 0);
+    const sumBPMs = intervalsBPM.reduce((acc, bpm) => acc + bpm, 0);
 
     // Calculate time for each interval based on BPM proportion
-    for (let i = 0; i < intervalsBPMs.length; i++) {
-        timeIntervals[i] = (1-(intervalsBPMs[i] / sumBPMs)) * totalTime;
+    for (let i = 0; i < intervalsBPM.length; i++) {
+        timeIntervals[i] = (1-(intervalsBPM[i] / sumBPMs)) * totalTime;
     }
 
     // Helper function to get a random track for a given BPM
@@ -166,8 +165,8 @@ function generatePlaylist(intervalsBPMs, totalTime, bpmMap) {
 
     // Generate the playlist
     // Loops through the different intervals
-    for (let i = 0; i < intervalsBPMs.length; i++) {
-        const bpm = intervalsBPMs[i];
+    for (let i = 0; i < intervalsBPM.length; i++) {
+        const bpm = intervalsBPM[i];
         const targetTime = timeIntervals[i] * 60; // Convert time from minutes to seconds
         let tempTime = 0;
 
@@ -199,37 +198,38 @@ async function _getLikedSongs(token){
 async function _getUser(token){
     const result = await fetch(`https://api.spotify.com/v1/me`, {
         method: 'GET',
-        headers: { 'Authorization' : 'Bearer ' + token,
-            'Content-Type' : 'application/json'
-        }
+        headers: { 'Authorization' : 'Bearer ' + token}
     });
-    return await result.json();
+    return (await result.json());
 }
 
-async function _makePlaylist(token, user_id){
-    const result = await fetch(`https://api.spotify.com/v1/users/${user_id}/playlists`, {
+async function _createPlaylist(token, id){
+    const result = await fetch(`https://api.spotify.com/v1/users/${id}/playlists`, {
         method: 'POST',
         headers: { 'Authorization' : 'Bearer ' + token,
-            'Content-Type' : 'application/json'
+            'Content-Type': 'application/json'
         },
-        data: {
-            'name' : "New Run: ",
-        }
+        body: JSON.stringify({
+            name : "H1"
+        })
     });
-    return await result.json();
+    return (await result.json());
 }
 
 async function _addPlaylist(token, playlistID, playList){
-    // var uri = [];
-    // for(let i = 0; i < playList.length; i++){
-    //     uri[i] = "playList[i].uri;
-    // } 
+    let URIS = [];
+    for(let i = 0; i < playList.length; i++)
+    {
+        URIS.push(playList[i].uri);
+    }
     const result = await fetch(`https://api.spotify.com/v1/playlists/${playlistID}/tracks`, {
         method: 'POST',
-        headers: { 'Authorization' : 'Bearer ' + token,},
-        data: {
-            'uris' : "spotify:track:3xKsf9qdS1CyvXSMEid6g8"
-        }
+        headers: { 'Authorization' : 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            uris: URIS
+        })
     });
-    return await result.json();
+    return (await result.json());
 }

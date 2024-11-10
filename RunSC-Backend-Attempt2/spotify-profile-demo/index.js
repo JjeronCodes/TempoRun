@@ -42,8 +42,8 @@ app.use(cors()); // Enable CORS to allow requests from different origins
 app.use(express.json()); // Parse JSON request bodies
 
 // Endpoint to receive data
-//export let goalTime = 0;
-//export let intervalsBPM = [];
+export let goalTime = 0;
+export let intervalsBPMs = [];
 app.post('/api/processData', (req, res) => {
     const { goalTime, intervalsBPMs } = req.body;
 
